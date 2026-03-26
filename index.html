@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GlassCost — CIF Landed Cost Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0e14;
+  --surface: #111822;
+  --surface2: #1a2433;
+  --surface3: #0d1e30;
+  --border: #1e2d40;
+  --accent: #00c2ff;
+  --accent2: #ff6b2b;
+  --green: #00e5a0;
+  --yellow: #ffd166;
+  --text: #e8edf2;
+  --muted: #6b7f94;
+  --cpt: #a78bfa;
+  --jhb: #00c2ff;
+  --kzn: #00e5a0;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+.header {
+  background: linear-gradient(135deg, #0a0e14 0%, #0d1e30 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.logo { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: var(--accent); line-height: 1; }
+.logo span { color: var(--accent2); }
+.badge { background: var(--accent2); color: #fff; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 20px; letter-spacing: 1px; text-transform: uppercase; }
+.btn { border: none; padding: 8px 14px; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 12px; cursor: pointer; letter-spacing: 0.5px; white-space: nowrap; }
+.btn-primary { background: var(--accent); color: #000; }
+.btn-outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+
+/* GLOBALS */
+.globals { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.section-label { font-family: 'Bebas Neue', sans-serif; font-size: 13px; letter-spacing: 2px; color: var(--muted); margin-bottom: 10px; }
+
+.rate-block { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+.field label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.field input, .field select {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); padding: 7px 10px; border-radius: 6px;
+  font-family: 'DM Mono', monospace; font-size: 13px; width: 100%;
+  outline: none; transition: border-color 0.2s;
+}
+.field input:focus, .field select:focus { border-color: var(--accent); }
+.field select option { background: var(--surface2); }
+.field { display: flex; flex-direction: column; gap: 4px; }
+
+/* REGION CARDS */
+.region-factors { display: flex; gap: 10px; flex-wrap: wrap; }
+.region-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 16px;
+  display: flex; flex-direction: column; gap: 4px; min-width: 100px;
+}
+.region-card.cpt { border-color: var(--cpt)55; }
+.region-card.jhb { border-color: var(--jhb)55; }
+.region-card.kzn { border-color: var(--kzn)55; }
+.rlabel { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
+.region-card.cpt .rlabel { color: var(--cpt); }
+.region-card.jhb .rlabel { color: var(--jhb); }
+.region-card.kzn .rlabel { color: var(--kzn); }
+.region-card input {
+  background: transparent; border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text); font-family: 'DM Mono', monospace;
+  font-size: 22px; font-weight: 500; width: 80px;
+  outline: none; padding: 2px 0;
+}
+.rsub { font-size: 10px; color: var(--muted); }
+
+/* FORMULA BAR */
+.formula-bar {
+  background: var(--surface3); border-bottom: 1px solid var(--border);
+  padding: 9px 20px; display: flex; align-items: center; gap: 6px;
+  flex-wrap: wrap; font-family: 'DM Mono', monospace; font-size: 12px;
+}
+.f-part { color: var(--muted); }
+.f-val  { color: var(--accent); font-weight: 600; }
+.f-op   { color: var(--accent2); font-weight: 700; padding: 0 3px; }
+.f-eq   { color: var(--yellow); font-weight: 700; padding: 0 3px; }
+
+/* MAIN */
+.main { padding: 16px 20px; }
+.tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.tab { padding: 8px 18px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; transition: all 0.2s; }
+.tab.active { background: var(--accent); color: #000; border-color: var(--accent); }
+.tab:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+.supplier-panel { display: none; }
+.supplier-panel.active { display: block; }
+
+.s-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+.s-card-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 2fr 1fr 1fr 2fr; gap: 10px; align-items: end; background: var(--surface3); }
+
+.order-section { padding: 14px 16px; }
+.order-section-title { font-family: 'Bebas Neue', sans-serif; font-size: 13px; letter-spacing: 2px; color: var(--muted); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+.btn-add-line { background: var(--surface2); color: var(--accent); border: 1px solid var(--accent); padding: 5px 12px; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+.btn-add-line:hover { background: var(--accent); color: #000; }
+.order-lines { display: flex; flex-direction: column; gap: 8px; }
+
+/* ── ORDER LINE: two-row layout ── */
+.order-line {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 2fr 1fr 90px 90px 120px;
+  grid-template-rows: auto auto;
+  gap: 8px 10px;
+  align-items: end;
+}
+/* Row 1: Size | Thickness | Qty | m²/sheet | Line m² */
+/* Row 2: CIF price | CPT result | JHB result | KZN result | delete */
+.ol-size     { grid-column: 1; grid-row: 1; }
+.ol-thick    { grid-column: 2; grid-row: 1; }
+.ol-qty      { grid-column: 3; grid-row: 1; }
+.ol-m2sheet  { grid-column: 4; grid-row: 1; }
+.ol-linem2   { grid-column: 5; grid-row: 1; }
+.ol-cif      { grid-column: 1; grid-row: 2; }
+.ol-cpt      { grid-column: 2; grid-row: 2; }
+.ol-jhb      { grid-column: 3; grid-row: 2; }
+.ol-kzn      { grid-column: 4; grid-row: 2; }
+.ol-del      { grid-column: 5; grid-row: 2; display: flex; align-items: flex-end; }
+
+.order-line .field label { font-size: 9px; }
+.order-line .field input,
+.order-line .field select { padding: 6px 8px; font-size: 12px; }
+
+.calc-cell { display: flex; flex-direction: column; gap: 4px; }
+.clabel { font-size: 9px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.cval { font-family: 'DM Mono', monospace; font-size: 13px; padding: 6px 0 5px; border-bottom: 1px solid var(--border); min-height: 30px; color: var(--text); }
+.cval.blue   { color: var(--accent); }
+.cval.cpt    { color: var(--cpt); font-weight: 600; font-size: 14px; }
+.cval.jhb    { color: var(--jhb); font-weight: 600; font-size: 14px; }
+.cval.kzn    { color: var(--kzn); font-weight: 600; font-size: 14px; }
+.cval.muted  { color: var(--muted); }
+
+.btn-del { background: transparent; border: 1px solid #ff444444; color: #ff4444; width: 32px; height: 32px; border-radius: 5px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+.btn-del:hover { background: #ff444422; border-color: #ff4444; }
+
+/* SUMMARY BAR */
+.container-bar { background: var(--surface3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-top: 10px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }
+.cbar-item { display: flex; flex-direction: column; gap: 2px; }
+.cbar-label { font-size: 9px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.cbar-val { font-family: 'DM Mono', monospace; font-size: 15px; }
+
+/* COMPARISON */
+.section-title { font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 2px; color: var(--muted); margin: 20px 0 10px; display: flex; align-items: center; gap: 10px; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.compare-section { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.compare-header { background: var(--surface); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
+.compare-title { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 2px; color: var(--accent2); }
+.note { font-size: 11px; color: var(--muted); padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); line-height: 1.8; }
+
+table { width: 100%; border-collapse: collapse; font-family: 'DM Mono', monospace; font-size: 12px; }
+thead tr { background: var(--surface3); }
+th { padding: 9px 10px; text-align: right; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; border-bottom: 1px solid var(--border); }
+th:first-child, th:nth-child(2) { text-align: left; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(0,194,255,0.04); }
+td { padding: 8px 10px; text-align: right; white-space: nowrap; }
+td:first-child, td:nth-child(2) { text-align: left; }
+.thickness-badge { display: inline-block; background: var(--surface2); color: var(--accent); padding: 2px 7px; border-radius: 4px; font-size: 11px; }
+.size-tag { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+.empty-state { padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
+
+@media (max-width: 700px) {
+  .order-line { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto; }
+  .ol-size    { grid-column: 1; grid-row: 1; }
+  .ol-thick   { grid-column: 2; grid-row: 1; }
+  .ol-qty     { grid-column: 1; grid-row: 2; }
+  .ol-m2sheet { grid-column: 2; grid-row: 2; }
+  .ol-linem2  { grid-column: 1; grid-row: 3; }
+  .ol-cif     { grid-column: 2; grid-row: 3; }
+  .ol-cpt     { grid-column: 1; grid-row: 4; }
+  .ol-jhb     { grid-column: 2; grid-row: 4; }
+  .ol-kzn     { grid-column: 1; grid-row: 5; }
+  .ol-del     { grid-column: 2; grid-row: 5; }
+  .s-card-header { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="logo">GLASS<span>COST</span></div>
+    <div class="badge">CIF · China 2026</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-outline" onclick="exportCSV()">⬇ CSV</button>
+    <button class="btn btn-primary" onclick="recalcAll()">↻ Recalc</button>
+  </div>
+</div>
+
+<div class="globals">
+  <div>
+    <div class="section-label">Exchange Rate</div>
+    <div class="field" style="min-width:180px">
+      <label>USD / ZAR Rate</label>
+      <input type="number" id="exRate" value="18.50" step="0.01" oninput="recalcAll(); updateFormula()">
+    </div>
+  </div>
+  <div>
+    <div class="section-label">Regional Landing Factors</div>
+    <div class="region-factors">
+      <div class="region-card cpt">
+        <div class="rlabel">CPT</div>
+        <input type="number" id="f_cpt" value="1.35" step="0.01" min="1" oninput="recalcAll(); updateFormula()">
+        <div class="rsub">Cape Town</div>
+      </div>
+      <div class="region-card jhb">
+        <div class="rlabel">JHB</div>
+        <input type="number" id="f_jhb" value="1.50" step="0.01" min="1" oninput="recalcAll(); updateFormula()">
+        <div class="rsub">Johannesburg</div>
+      </div>
+      <div class="region-card kzn">
+        <div class="rlabel">KZN</div>
+        <input type="number" id="f_kzn" value="1.35" step="0.01" min="1" oninput="recalcAll(); updateFormula()">
+        <div class="rsub">KwaZulu-Natal</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="formula-bar">
+  <span class="f-part">Landed ZAR/m²</span>
+  <span class="f-eq">=</span>
+  <span class="f-part">CIF USD/m²</span>
+  <span class="f-op">×</span>
+  <span class="f-val" id="fb_rate">18.50</span>
+  <span class="f-part">ZAR/USD</span>
+  <span class="f-op">×</span>
+  <span class="f-part">factor &nbsp;
+    <span style="color:var(--cpt)">CPT <span id="fb_cpt">1.35</span></span> &nbsp;·&nbsp;
+    <span style="color:var(--jhb)">JHB <span id="fb_jhb">1.50</span></span> &nbsp;·&nbsp;
+    <span style="color:var(--kzn)">KZN <span id="fb_kzn">1.35</span></span>
+  </span>
+</div>
+
+<div class="main">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab(0)" id="tab0">Supplier 1</div>
+    <div class="tab" onclick="switchTab(1)" id="tab1">Supplier 2</div>
+    <div class="tab" onclick="switchTab(2)" id="tab2">Supplier 3</div>
+  </div>
+
+  <div id="panels"></div>
+
+  <div class="section-title">Side-by-Side Comparison — All Suppliers &amp; Regions</div>
+  <div class="compare-section">
+    <div class="compare-header">
+      <div class="compare-title">Landed ZAR/m² by Region</div>
+      <span style="font-size:11px;color:var(--muted)">CIF USD/m² × Rate × Factor</span>
+    </div>
+    <div style="overflow-x:auto">
+      <div id="comparisonTable"><div class="empty-state">Enter CIF prices above to see comparison</div></div>
+    </div>
+    <div class="note">
+      Formula: <span style="color:var(--accent);font-family:'DM Mono',monospace">CIF USD/m² × ZAR rate × regional factor</span><br>
+      <span style="color:var(--cpt)">■ CPT ×1.35</span> &nbsp;·&nbsp;
+      <span style="color:var(--jhb)">■ JHB ×1.50</span> &nbsp;·&nbsp;
+      <span style="color:var(--kzn)">■ KZN ×1.35</span> &nbsp;·&nbsp;
+      Green = best price per region across all suppliers
+    </div>
+  </div>
+</div>
+
+<script>
+const SIZES = {
+  '1830x1220':{w:1830,h:1220},
+  '2440x1830':{w:2440,h:1830},
+  '3210x2250':{w:3210,h:2250},
+  '3300x2140':{w:3300,h:2140},
+  '3660x2440':{w:3660,h:2440}
+};
+const SIZE_LABELS = {
+  '1830x1220':'1830×1220','2440x1830':'2440×1830',
+  '3210x2250':'3210×2250','3300x2140':'3300×2140','3660x2440':'3660×2440'
+};
+const THICKNESSES = [3,4,5,6,8,10,12,15];
+const REGIONS = ['cpt','jhb','kzn'];
+const REGION_LABELS = {cpt:'CPT',jhb:'JHB',kzn:'KZN'};
+const SUP_COLORS = ['var(--accent)','var(--yellow)','var(--accent2)'];
+
+const state = [{lines:[]},{lines:[]},{lines:[]}];
+let lineCounter = 0;
+
+function getNum(id){ return parseFloat(document.getElementById(id)?.value)||0; }
+function sheetM2(sk){ const s=SIZES[sk]; return (s.w*s.h)/1e6; }
+function sizeOptions(sel){ return Object.keys(SIZES).map(k=>`<option value="${k}"${k===sel?' selected':''}>${SIZE_LABELS[k]}</option>`).join(''); }
+function thickOptions(sel){ return THICKNESSES.map(t=>`<option value="${t}"${t==sel?' selected':''}>${t}mm</option>`).join(''); }
+
+function updateFormula(){
+  document.getElementById('fb_rate').textContent = getNum('exRate').toFixed(2);
+  document.getElementById('fb_cpt').textContent  = getNum('f_cpt').toFixed(2);
+  document.getElementById('fb_jhb').textContent  = getNum('f_jhb').toFixed(2);
+  document.getElementById('fb_kzn').textContent  = getNum('f_kzn').toFixed(2);
+}
+
+function buildPanels(){
+  const cont = document.getElementById('panels');
+  cont.innerHTML = '';
+  for(let si=0;si<3;si++){
+    const div = document.createElement('div');
+    div.className = 'supplier-panel'+(si===0?' active':'');
+    div.id = `panel${si}`;
+    div.innerHTML = `
+      <div class="s-card">
+        <div class="s-card-header">
+          <div class="field"><label>Supplier Name</label><input type="text" id="s${si}_name" value="Supplier ${si+1}" oninput="updateTabs()"></div>
+          <div class="field"><label>Origin City</label><input type="text" id="s${si}_city" value="Shanghai"></div>
+          <div class="field"><label>Incoterm</label>
+            <select id="s${si}_inco"><option selected>CIF</option><option>CFR</option><option>FOB</option></select>
+          </div>
+          <div class="field"><label>Notes</label><input type="text" id="s${si}_notes" placeholder="Lead time, MOQ..."></div>
+        </div>
+        <div class="order-section">
+          <div class="order-section-title">
+            <span>Order Lines (max 6)</span>
+            <button class="btn-add-line" onclick="addLine(${si})">+ Add Line</button>
+          </div>
+          <div class="order-lines" id="s${si}_lines"></div>
+          <div class="container-bar">
+            <div class="cbar-item"><div class="cbar-label">Lines</div><div class="cbar-val" id="s${si}_bar_lines" style="color:var(--accent)">0</div></div>
+            <div class="cbar-item"><div class="cbar-label">Total Sheets</div><div class="cbar-val" id="s${si}_bar_sheets">0</div></div>
+            <div class="cbar-item"><div class="cbar-label">Total m²</div><div class="cbar-val" id="s${si}_bar_m2" style="color:var(--accent)">—</div></div>
+            <div class="cbar-item"><div class="cbar-label">Wtd Avg CPT ZAR/m²</div><div class="cbar-val" id="s${si}_bar_cpt" style="color:var(--cpt)">—</div></div>
+            <div class="cbar-item"><div class="cbar-label">Wtd Avg JHB ZAR/m²</div><div class="cbar-val" id="s${si}_bar_jhb" style="color:var(--jhb)">—</div></div>
+            <div class="cbar-item"><div class="cbar-label">Wtd Avg KZN ZAR/m²</div><div class="cbar-val" id="s${si}_bar_kzn" style="color:var(--kzn)">—</div></div>
+          </div>
+        </div>
+      </div>`;
+    cont.appendChild(div);
+    addLine(si); addLine(si); addLine(si);
+  }
+}
+
+function addLine(si){
+  if(state[si].lines.length >= 6){ alert('Maximum 6 lines per supplier'); return; }
+  const lid = lineCounter++;
+  state[si].lines.push(lid);
+  const container = document.getElementById(`s${si}_lines`);
+  const div = document.createElement('div');
+  div.className = 'order-line';
+  div.id = `line_${si}_${lid}`;
+  const defSizes  = ['3210x2250','2440x1830','1830x1220','3300x2140','3660x2440','3210x2250'];
+  const defThicks = [6,6,4,8,10,12];
+  const idx = state[si].lines.length - 1;
+
+  div.innerHTML = `
+    <div class="field ol-size"><label>Sheet Size</label>
+      <select id="sz_${si}_${lid}" onchange="recalcSupplier(${si})">${sizeOptions(defSizes[idx%6])}</select>
+    </div>
+    <div class="field ol-thick"><label>Thickness</label>
+      <select id="tk_${si}_${lid}" onchange="recalcSupplier(${si})">${thickOptions(defThicks[idx%6])}</select>
+    </div>
+    <div class="field ol-qty"><label>Qty (Sheets)</label>
+      <input type="number" id="sh_${si}_${lid}" value="50" min="1" oninput="recalcSupplier(${si})">
+    </div>
+    <div class="calc-cell ol-m2sheet">
+      <div class="clabel">m²/Sheet</div>
+      <div class="cval blue" id="m2s_${si}_${lid}">—</div>
+    </div>
+    <div class="calc-cell ol-linem2">
+      <div class="clabel">Line m²</div>
+      <div class="cval blue" id="tm2_${si}_${lid}">—</div>
+    </div>
+    <div class="field ol-cif"><label>CIF Price USD/m²</label>
+      <input type="number" id="cif_${si}_${lid}" value="" placeholder="e.g. 8.95" step="0.01" oninput="recalcSupplier(${si})">
+    </div>
+    <div class="calc-cell ol-cpt">
+      <div class="clabel" style="color:var(--cpt)">▪ CPT ZAR/m²</div>
+      <div class="cval cpt" id="r_cpt_${si}_${lid}">—</div>
+    </div>
+    <div class="calc-cell ol-jhb">
+      <div class="clabel" style="color:var(--jhb)">▪ JHB ZAR/m²</div>
+      <div class="cval jhb" id="r_jhb_${si}_${lid}">—</div>
+    </div>
+    <div class="calc-cell ol-kzn">
+      <div class="clabel" style="color:var(--kzn)">▪ KZN ZAR/m²</div>
+      <div class="cval kzn" id="r_kzn_${si}_${lid}">—</div>
+    </div>
+    <div class="ol-del">
+      <button class="btn-del" onclick="removeLine(${si},${lid})">✕</button>
+    </div>`;
+
+  container.appendChild(div);
+  recalcSupplier(si);
+}
+
+function removeLine(si, lid){
+  state[si].lines = state[si].lines.filter(l=>l!==lid);
+  document.getElementById(`line_${si}_${lid}`)?.remove();
+  recalcSupplier(si);
+}
+
+function recalcSupplier(si){
+  const exRate = getNum('exRate');
+  const fCPT   = getNum('f_cpt');
+  const fJHB   = getNum('f_jhb');
+  const fKZN   = getNum('f_kzn');
+
+  let totalSheets=0, totalM2=0, sumCPT=0, sumJHB=0, sumKZN=0, sumM2=0;
+
+  state[si].lines.forEach(lid=>{
+    const sk     = document.getElementById(`sz_${si}_${lid}`)?.value;
+    const sheets = getNum(`sh_${si}_${lid}`);
+    const cifUSD = getNum(`cif_${si}_${lid}`);
+    if(!sk) return;
+
+    const m2     = sheetM2(sk);
+    const lineM2 = m2 * sheets;
+    totalSheets += sheets;
+    totalM2     += lineM2;
+
+    const s = id => { const el=document.getElementById(id); if(el) el.textContent=val; };
+    document.getElementById(`m2s_${si}_${lid}`).textContent = m2.toFixed(4);
+    document.getElementById(`tm2_${si}_${lid}`).textContent = lineM2.toFixed(3);
+
+    if(cifUSD > 0){
+      const base = cifUSD * exRate;
+      const cpt  = base * fCPT;
+      const jhb  = base * fJHB;
+      const kzn  = base * fKZN;
+      document.getElementById(`r_cpt_${si}_${lid}`).textContent = 'R '+cpt.toFixed(2);
+      document.getElementById(`r_jhb_${si}_${lid}`).textContent = 'R '+jhb.toFixed(2);
+      document.getElementById(`r_kzn_${si}_${lid}`).textContent = 'R '+kzn.toFixed(2);
+      sumCPT += cpt * lineM2;
+      sumJHB += jhb * lineM2;
+      sumKZN += kzn * lineM2;
+      sumM2  += lineM2;
+    } else {
+      document.getElementById(`r_cpt_${si}_${lid}`).textContent = '—';
+      document.getElementById(`r_jhb_${si}_${lid}`).textContent = '—';
+      document.getElementById(`r_kzn_${si}_${lid}`).textContent = '—';
+    }
+  });
+
+  document.getElementById(`s${si}_bar_lines`).textContent  = state[si].lines.length;
+  document.getElementById(`s${si}_bar_sheets`).textContent = totalSheets;
+  document.getElementById(`s${si}_bar_m2`).textContent     = totalM2.toFixed(2);
+  document.getElementById(`s${si}_bar_cpt`).textContent    = sumM2>0 ? 'R '+(sumCPT/sumM2).toFixed(2) : '—';
+  document.getElementById(`s${si}_bar_jhb`).textContent    = sumM2>0 ? 'R '+(sumJHB/sumM2).toFixed(2) : '—';
+  document.getElementById(`s${si}_bar_kzn`).textContent    = sumM2>0 ? 'R '+(sumKZN/sumM2).toFixed(2) : '—';
+
+  renderComparison();
+}
+
+function recalcAll(){
+  updateFormula();
+  for(let si=0;si<3;si++) recalcSupplier(si);
+}
+
+function switchTab(idx){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===idx));
+  document.querySelectorAll('.supplier-panel').forEach((p,i)=>p.classList.toggle('active',i===idx));
+}
+function updateTabs(){
+  for(let i=0;i<3;i++){
+    const name = document.getElementById(`s${i}_name`)?.value||`Supplier ${i+1}`;
+    document.getElementById(`tab${i}`).textContent = name;
+  }
+}
+
+function getLanded(si, sk, tk){
+  const exRate = getNum('exRate');
+  let cif = null;
+  state[si].lines.forEach(lid=>{
+    const lsk = document.getElementById(`sz_${si}_${lid}`)?.value;
+    const ltk = document.getElementById(`tk_${si}_${lid}`)?.value;
+    const c   = getNum(`cif_${si}_${lid}`);
+    if(lsk===sk && ltk==tk && c>0) cif = c;
+  });
+  if(cif===null) return null;
+  const base = cif * exRate;
+  return { cif, cpt: base*getNum('f_cpt'), jhb: base*getNum('f_jhb'), kzn: base*getNum('f_kzn') };
+}
+
+function renderComparison(){
+  const names = [0,1,2].map(i=>document.getElementById(`s${i}_name`)?.value||`Supplier ${i+1}`);
+  const combos = new Set();
+  for(let si=0;si<3;si++){
+    state[si].lines.forEach(lid=>{
+      const sk  = document.getElementById(`sz_${si}_${lid}`)?.value;
+      const tk  = document.getElementById(`tk_${si}_${lid}`)?.value;
+      const cif = getNum(`cif_${si}_${lid}`);
+      if(sk && tk && cif>0) combos.add(`${sk}|${tk}`);
+    });
+  }
+  if(combos.size===0){
+    document.getElementById('comparisonTable').innerHTML='<div class="empty-state">Enter CIF prices in the order lines above to see comparison</div>';
+    return;
+  }
+
+  const rows = [];
+  combos.forEach(combo=>{
+    const [sk,tk] = combo.split('|');
+    rows.push({ sk, tk, m2: sheetM2(sk), data: [0,1,2].map(si=>getLanded(si,sk,tk)) });
+  });
+  rows.sort((a,b)=>a.sk.localeCompare(b.sk)||a.tk-b.tk);
+
+  let html=`<table><thead>
+    <tr>
+      <th rowspan="2">Size</th>
+      <th rowspan="2">Thick</th>
+      ${names.map((n,i)=>`<th colspan="3" style="text-align:center;color:${SUP_COLORS[i]};border-left:2px solid var(--border)">${n}</th>`).join('')}
+      <th colspan="3" style="text-align:center;color:var(--green);border-left:2px solid var(--border)">Best Price</th>
+    </tr>
+    <tr>
+      ${names.map(()=>REGIONS.map((r,i)=>`<th style="color:var(--${r})${i===0?';border-left:2px solid var(--border)':''}">${REGION_LABELS[r]}<br><span style="font-size:9px;color:var(--muted)">ZAR/m²</span></th>`).join('')).join('')}
+      ${REGIONS.map((r,i)=>`<th style="color:var(--${r})${i===0?';border-left:2px solid var(--border)':''}">${REGION_LABELS[r]}<br><span style="font-size:9px;color:var(--muted)">ZAR/m²</span></th>`).join('')}
+    </tr>
+  </thead><tbody>`;
+
+  rows.forEach(({sk,tk,m2,data})=>{
+    const best = {};
+    REGIONS.forEach(r=>{
+      const vals = data.map(d=>d?d[r]:null).filter(v=>v!==null);
+      best[r] = vals.length ? Math.min(...vals) : null;
+    });
+
+    html+=`<tr>
+      <td><span class="size-tag">${SIZE_LABELS[sk]}</span></td>
+      <td><span class="thickness-badge">${tk}mm</span></td>
+      ${data.map((d,si)=>{
+        if(!d) return REGIONS.map((r,i)=>`<td style="color:var(--muted)${i===0?';border-left:2px solid var(--border)':''}">—</td>`).join('');
+        return REGIONS.map((r,i)=>{
+          const v = d[r];
+          const isBest = best[r]!==null && Math.abs(v-best[r])<0.001;
+          return `<td style="color:${isBest?'var(--green)':'var(--text)'};font-weight:${isBest?700:400};background:${isBest?'rgba(0,229,160,0.06)':''}${i===0?';border-left:2px solid var(--border)':''}">R ${v.toFixed(2)}</td>`;
+        }).join('');
+      }).join('')}
+      ${REGIONS.map((r,i)=>`<td style="color:var(--${r});font-weight:700${i===0?';border-left:2px solid var(--border)':''}">${best[r]!==null?'R '+best[r].toFixed(2):'—'}</td>`).join('')}
+    </tr>`;
+  });
+
+  html+=`</tbody></table>`;
+  document.getElementById('comparisonTable').innerHTML=html;
+}
+
+function exportCSV(){
+  const exRate = getNum('exRate');
+  const fCPT = getNum('f_cpt'), fJHB = getNum('f_jhb'), fKZN = getNum('f_kzn');
+  const names = [0,1,2].map(i=>document.getElementById(`s${i}_name`)?.value||`Supplier ${i+1}`);
+  let csv=`Supplier,Size,Thickness,Sheets,m2/Sheet,Line m2,CIF USD/m2,Rate,CPT Factor,JHB Factor,KZN Factor,CPT ZAR/m2,JHB ZAR/m2,KZN ZAR/m2,CPT ZAR/sheet,JHB ZAR/sheet,KZN ZAR/sheet\n`;
+  for(let si=0;si<3;si++){
+    state[si].lines.forEach(lid=>{
+      const sk  = document.getElementById(`sz_${si}_${lid}`)?.value;
+      const tk  = document.getElementById(`tk_${si}_${lid}`)?.value;
+      const sh  = getNum(`sh_${si}_${lid}`);
+      const cif = getNum(`cif_${si}_${lid}`);
+      if(!sk||!cif) return;
+      const m2 = sheetM2(sk);
+      const base = cif*exRate;
+      const cpt=base*fCPT, jhb=base*fJHB, kzn=base*fKZN;
+      csv+=`${names[si]},${SIZE_LABELS[sk]},${tk}mm,${sh},${m2.toFixed(4)},${(m2*sh).toFixed(3)},${cif.toFixed(2)},${exRate.toFixed(2)},${fCPT},${fJHB},${fKZN},${cpt.toFixed(2)},${jhb.toFixed(2)},${kzn.toFixed(2)},${(cpt*m2).toFixed(2)},${(jhb*m2).toFixed(2)},${(kzn*m2).toFixed(2)}\n`;
+    });
+  }
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='glass_cif_landed.csv';
+  a.click();
+}
+
+buildPanels();
+updateFormula();
+</script>
+</body>
+</html>
