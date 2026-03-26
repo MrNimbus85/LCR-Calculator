@@ -1,0 +1,2 @@
+# LCR-Calculator
+LCR Calculator
